@@ -45,16 +45,6 @@
 					<convertBodyTo type="java.lang.String" />
 					<camel:to ref="hl7KPClient" />
 				</camel:when>
-				<camel:when>
-					<camel:xpath>/person/city = 'London'</camel:xpath>
-					<camel:log
-						message="thread: ${threadName}, file:${file:name} UK message ${body}" />
-					<camel:to uri="file:target/messages/uk" />
-				</camel:when>
-				<camel:otherwise>
-					<camel:log message="Other message" />
-					<camel:to uri="file:target/messages/others" />
-				</camel:otherwise>
 			</camel:choice>
 		</camel:route>
 
