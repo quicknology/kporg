@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Configures the Camel Context -->
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:camel="http://camel.apache.org/schema/spring"
+	xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd">
+
+	<bean id="hl7codec" class="org.apache.camel.component.hl7.HL7MLLPCodec">
+		<property name="charset" value="iso-8859-1" />
+	</bean>
+
+	<bean id="patientLookupService" class="com.indigoarc.PatientLookupService" />
+
+	<bean id="myRouteBuilder" class="com.indigoarc.MyRouteBuilder" />
+
+	<camel:camelContext xmlns="http://camel.apache.org/schema/spring">
+		<!-- <camel:routeBuilder ref="myRouteBuilder" /> -->
+
+		<camel:endpoint id="hl7IndigoServer"
+			uri="mina2:tcp://localhost:8888?sync=true&amp;codec=#hl7codec" />
+
+		<camel:endpoint id="hl7KPClient"
+			uri="mina2:tcp://localhost:9999?sync=true&amp;codec=#hl7codec" />
+
+		<camel:route id="hl7IndigoServer">
+			<camel:from ref="hl7IndigoServer" />
+			<camel:bean ref="patientLookupService" />
+		</camel:route>
+
+		<camel:route id="hl7KPClient">
+			<camel:from ref="hl7KPClient" />
+			<camel:to ref="hl7IndigoServer" />
+		</camel:route>
+
+		<!-- here is a sample which processes the input files (leaving them in 
+			place - see the 'noop' flag) then performs content based routing on the message 
+			using XPath -->
+		<camel:route>
+			<camel:from uri="file:src/data?noop=true" />
+			<camel:choice>
+				<camel:when>
+					<camel:simple>${file:name} contains 'hl7'</camel:simple>
+					<convertBodyTo type="java.lang.String" />
+					<camel:to ref="hl7KPClient" />
+				</camel:when>
+				<camel:when>
+					<camel:xpath>/person/city = 'London'</camel:xpath>
+					<camel:log
+						message="thread: ${threadName}, file:${file:name} UK message ${body}" />
+					<camel:to uri="file:target/messages/uk" />
+				</camel:when>
+				<camel:otherwise>
+					<camel:log message="Other message" />
+					<camel:to uri="file:target/messages/others" />
+				</camel:otherwise>
+			</camel:choice>
+		</camel:route>
+
+	</camel:camelContext>
+
+</beans>
